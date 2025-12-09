@@ -1,5 +1,6 @@
 package org.example.gameserver.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -13,7 +14,10 @@ public class AttackResponse {
     private int barrierToPlayer;
     private int monsterHp;
 
+    @JsonProperty("isMonsterDead")
     private boolean isMonsterDead;
+
+    @JsonProperty("isPlayerDead")
     private boolean isPlayerDead;
 
     private int damageToPlayer;

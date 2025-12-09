@@ -133,11 +133,11 @@ public class PlayerService {
         }
     }
 
-    // 쿨타임 로딩
+
     public int[] loadBuffCount(PlayerEntity e) {
         try {
             if (e.getBuffCountJson() == null) return new int[2];
-            return mapper.readValue(e.getSkillCooldownJson(), int[].class);
+            return mapper.readValue(e.getBuffCountJson(), int[].class);
         } catch (Exception ex) {
             throw new RuntimeException("JSON 파싱 실패: " + ex.getMessage());
         }
@@ -257,61 +257,60 @@ public class PlayerService {
         }
         attackAvoidToPlayer = player.attackEvasion(player);
         attackAvoidToMonster = Objects.requireNonNull(target).attackEvasion(target);
-        // ============================
-        // 3) 턴 종료 처리
-        // ============================
-        if(!attackAvoidToMonster)
+// ============================
+// 3) 턴 종료 처리
+// ============================
+// (1) 플레이어가 몬스터에게 준 데미지 적용
+        if (!attackAvoidToMonster) {
             Objects.requireNonNull(target).takeDamage(damageFromPlayer, target);
+        }
+
+// (2) 플레이어 버리어 / 회복 적용
         player.barrier += barrierToPlayer;
-        if(player.maxHp-healFromPlayer >= player.hp)
+        if (player.maxHp - healFromPlayer >= player.hp)
             player.hp += healFromPlayer;
         else
             player.hp = player.maxHp;
 
+// (3) 몬스터가 아직 살아있으면 몬스터 반격(플레이어에게 데미지)
+        if (target.getHp() > 0) {
+            if (!attackAvoidToPlayer) {
+                player.takeDamage(damageFromMonster, player);
+            }
+            player.turnEnd();
+            target.turnEnd();
+        }
+
+// (4) 여기서 최종 HP 기반으로 죽음 판정 (레벨업 전에 판정!)
         monsterDead = target.getHp() <= 0;
         playerDead = player.getHp() <= 0;
 
-        if (target.getHp() > 0) {
-            // 몬스터 생존 → 플레이어 피격 처리
-            if(!attackAvoidToPlayer)
-                player.takeDamage(damageFromMonster, player);
-            player.turnEnd();
-            target.turnEnd();
-            }
-        else {
-            // 몬스터 사망 → 레벨업
+// (5) 몬스터가 죽었으면 체력 0 고정하고 레벨업 처리
+        if (monsterDead) {
+            target.setHp(0);   // 확실히 0으로 고정
             player.levelUp();
             target.levelUp();
         }
 
-
-        // ============================
-        // 4) PlayerEntity 저장
-        // ============================
+// ============================
+// 4) PlayerEntity 저장
+// ============================
         updateEntity(player, playerEntity); // DB 저장 포함됨
 
-
-        // ============================
-        // 5) MonsterEntity 저장
-        // ============================
+// ============================
+// 5) MonsterEntity 저장
+// ============================
         monsterService.updateEntity(target, monsterEntity);
 
-
-        // ============================
-        // 6) 클라이언트로 응답 반환
-        // ============================
+// ============================
+// 6) 클라이언트로 응답 반환
+// ============================
         PlayerStateResponse playerDTO = new PlayerStateResponse(player);
         MonsterDTO monsterDTO = new MonsterDTO(Objects.requireNonNull(target));
 
-        System.out.println(damageFromPlayer);
-        System.out.println(damageFromMonster);
-        System.out.println(attackAvoidToMonster);
-        System.out.println(healFromPlayer);
-        System.out.println(monsterDead);
-        System.out.println(playerDead);
-        System.out.println(attackAvoidToPlayer);
-        System.out.println(barrierToPlayer);
-        System.out.println();
+        System.out.println("monsterDead: " + monsterDead);
+        System.out.println("playerDead: " + playerDead);
+
         return new AttackResponse(
                 damageFromPlayer,
                 healFromPlayer,
@@ -327,5 +326,4 @@ public class PlayerService {
                 monsterDTO
         );
     }
-
 }

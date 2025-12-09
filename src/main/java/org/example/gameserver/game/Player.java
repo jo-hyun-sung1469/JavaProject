@@ -214,6 +214,7 @@ public class Player extends Unit {
     @Override
     public void turnEnd(){
         if(buffcount[0] > 0){
+
             if(hp <= maxHp)
                 hp += 50 * level;
 
@@ -233,6 +234,12 @@ public class Player extends Unit {
         for(int i = 0; i < skillCooltime.length; i++){
             if(skillCooltime[i] > 0){
                 skillCooltime[i]--;
+            }
+        }
+
+        for(int i = 0; i < buffcount.length; i++){
+            if(buffcount[i] > 0){
+                buffcount[i]--;
             }
         }
 
